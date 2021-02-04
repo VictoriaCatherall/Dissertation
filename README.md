@@ -1,1 +1,3 @@
-# Dissertation
+# Dissertation: Exploring SMS engagement via an interactive
+
+My project is to work with the Africa’s Voices Foundation(AVF) to produce an interactive visualisation of the data collected in one of their projects. The project I am looking into is where AVF partnered with UNICEF’s Joint Programme on Local Governance (JPLG) to deploy the Common Social Accountability Platform to give the opportunity for citizens to start a dialogue with the local government in Banadir during the COVID-19 crisis. A three-part radio series was broadcast across 5 local FM radio stations in Banadir, where AVF asked questions relating to the socio-economic impact of COVID-19 and how the Banadir Regional Authority (BRA) are responding to the crisis. The dialogues created from the citizens SMS responses are what I have used to create an interactive visualisation to show the engagement of the citizens throughout this project.
