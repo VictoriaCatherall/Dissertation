@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<button onClick="window.location.reload();">Refresh Graph</button>
+<h1>AVF Participant Engagement</h1>
+
+<!-- Button -->
+<div>
+  <input type="checkbox" class="checkbox" value="fromAVF" checked><label>fromAVF</label>
+  <input type="checkbox" class="checkbox" value="Normal" checked><label>Normal</label>
+  <input type="checkbox" class="checkbox" value="NC" checked><label>NC</label>
+  <input type="checkbox" class="checkbox" value="STOP" checked><label>STOP</label>
+  <input type="checkbox" class="checkbox" value="Other" checked><label>Other</label>
+</div>
+
+<div id="my_dataviz"></div>
+<h1>Selected Section:</h1>
+<div id="my_subdataviz"></div>
+
+
+<script>
+var DATAPATHNAME = "data/ordered_data/csv/ordered_data.csv";
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 60, left: 60},
+    width = 860 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom,
+    width2 = 430 - margin.left - margin.right,
+    height2 = 300 - margin.top - margin.bottom;
+
+var opacity = 0.25;
+var size = 1.5;
+//fc8d62
+var colours = {'fromAVF':'#e6ab02', 'STOP':'#ff5f02', 'NC':'#984ea3', 'Normal':'#4daf4a', 'Meta':'#377eb8', 'Control':'#377eb8', 'Other':'#377eb8'};
+
+
+// append the svg object to the body of the page
+var mainGraph = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(DATAPATHNAME,
+
+function(d){
+    return{Timestamp: d3.timeParse("%Y-%m-%d %H:%M:%S.%L%L%Z")(d.Timestamp), Order : d.Order, Colour : d.Colour}
+  }, 
+
+function(data) {
+
+  // Add X axis
+  var x = d3.scaleTime()
+    .domain(d3.extent(data, function(d){return d.Timestamp;}))
+    .range([ 0, width ]);
+  var xAxis = mainGraph.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x)
+    .ticks(d3.timeDay.every(1)))
+    .selectAll("text")
+    .attr("transform", "translate(-10,10)rotate(-45)")
+        .style("text-anchor", "end");
+  //Add x axis label
+  mainGraph.append("text")
+     .attr("text-anchor", "end")
+     .attr("x", width + 20)
+     .attr("y", height + margin.top + 30)
+     .text("Time");
+
+// append the svg object to the body of the page
+var subGraph = d3.select("#my_subdataviz")
+  .append("svg")
+    .attr("width", width2 + margin.left + margin.right)
+    .attr("height", height2 + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, d3.max(data, function(d){return +d.Order})])
+    .range([ height, 0]);
+  var yAxis = mainGraph.append("g")
+    .call(d3.axisLeft(y));
+
+  // Color scale: give me a specie name, I return a color
+  var color = d3.scaleOrdinal()
+    .domain(["fromAVF", "STOP", "NC", "Normal", "Meta", "Control", "Other"])
+    .range([ "#e6ab02", "#ff5f02", "#984ea3","#4daf4a", "#377eb8", "#377eb8", "#377eb8"])
+
+  // Add brushing
+  var brush = d3.brush()                 // Add the brush feature using the d3.brush function
+      .extent( [ [0,0], [width,height] ] ) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+      .on("end", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+
+  // Make var
+  var participants = mainGraph.append('g')
+
+ //add circles
+ participants
+    .selectAll("dot")
+    .data(data)
+    .enter()
+    .append("circle")
+      .attr("class", function (d) { return "dot " + d.Colour } )
+      .attr("cx", function (d) { return x(d.Timestamp); } )
+      .attr("cy", function (d) { return y(d.Order); } )
+      .attr("r", size)
+      .style("fill", function (d) { return color(d.Colour) } )
+      .style("opacity", opacity)
+
+  // Add the brushing
+  participants
+    .append("g")
+      .attr("class", "brush")
+      .call(brush);
+
+
+  // Add X axis
+  var x2 = d3.scaleTime()
+    .domain(d3.extent(data, function(d){return d.Timestamp;}))
+    .range([ 0, width2 ]);
+  var x2Axis = subGraph.append("g")
+    .attr("transform", "translate(0," + height2 + ")")
+    .call(d3.axisBottom(x2));
+  //Add x axis label
+  subGraph.append("text")
+     .attr("text-anchor", "end")
+     .attr("x", width2)
+     .attr("y", height2 + margin.top + 20)
+     .text("Time");
+
+  // Add Y axis
+  var y2 = d3.scaleLinear()
+    .domain([0, d3.max(data, function(d){return +d.Order})])
+    .range([ height2, 0]);
+  var y2Axis = subGraph.append("g")
+    .call(d3.axisLeft(y2));
+
+  // Add a clipPath: everything out of this area won't be drawn.
+  var clip = subGraph.append("defs").append("svg:clipPath")
+      .attr("id", "clip")
+      .append("svg:rect")
+      .attr("width", width2 )
+      .attr("height", height2 )
+      .attr("x", 0)
+      .attr("y", 0);
+
+ //Add clip
+ var subParticipants = subGraph.append('g')
+    .attr("clip-path", "url(#clip)");
+
+  // Add dots
+subParticipants
+    .selectAll("circle")
+    .data(data)
+    .enter()
+    .append("circle")
+      .attr("class", function (d) { return "circle " + d.Colour } )
+      .attr("cx", function (d) { return x2(d.Timestamp); } )
+      .attr("cy", function (d) { return y2(d.Order); } )
+      .attr("r", size)
+      .style("fill", function (d) { return color(d.Colour) } )
+      .style("opacity", opacity)
+      .style("shape-rendering", "optimizeSpeed");
+  
+
+  // A function that set idleTimeOut to null
+  var idleTimeout
+  function idled() { idleTimeout = null; }
+
+  // A function that update the chart for given boundaries
+  function updateChart() {
+
+    extent = d3.event.selection
+
+    // If no selection, back to initial coordinate. Otherwise, update X axis domain
+    if(!extent){
+      if (!idleTimeout) return idleTimeout = setTimeout(idled, 350); // This allows to wait a little bit
+      x2.domain(d3.extent(data, function(d){return d.Timestamp;}))
+      y2.domain([0, d3.max(data, function(d){return +d.Order})])
+    }else{
+      x2.domain([ x.invert(extent[0][0]), x.invert(extent[1][0]) ])
+      y2.domain([ y.invert(extent[1][1]), y.invert(extent[0][1]) ])
+      //participants.select(".brush").call(brush.move, null) // This remove the grey brush area as soon as the selection has been done
+    }
+
+    // Update axis and circle position
+    x2Axis.transition().duration(10).call(d3.axisBottom(x2))
+    y2Axis.transition().duration(10).call(d3.axisLeft(y2))
+    subParticipants
+      .selectAll("circle")
+      .transition().duration(10)
+      .attr("r", size*2)
+      .attr("cx", function (d) { return x2(d.Timestamp); } )
+      .attr("cy", function (d) { return y2(d.Order); } )
+
+    }
+
+  // This function is gonna change the opacity and size of selected and unselected circles
+    function update(){
+
+      // For each check box:
+      d3.selectAll(".checkbox").each(function(d){
+        cb = d3.select(this);
+        grp = cb.property("value")
+
+        // If the box is check, I show the group
+        if(cb.property("checked")){
+          participants.selectAll("."+grp).transition().duration(100).style("opacity", opacity)
+          subParticipants.selectAll("."+grp).transition().duration(100).style("opacity", opacity*2)
+
+        // Otherwise I hide it
+        }else{
+          participants.selectAll("."+grp).transition().duration(100).style("opacity", 0)
+          subParticipants.selectAll("."+grp).transition().duration(100).style("opacity", 0)
+        }
+      })
+    }
+
+    // When a button change, I run the update function
+    d3.selectAll(".checkbox").on("change",update);
+
+    // And I initialize it at the beginning
+    update()
+})
+
+
+</script>
